@@ -1,4 +1,5 @@
 #include <uapi/linux/elf.h>
+
 struct PrivSec_t {
 	char name[100];
 	Elf32_Addr add_beg;
