@@ -7,7 +7,7 @@
 #include <linux/syscalls.h>
 #include <linux/ps_info.h>
 
-asmlinkage long sys_ps_info(struct PrivSec_t *h) 
+asmlinkage long sys_ps_info(struct PrivSec_t *h, int level) 
 {
 	if (current->ps_info_h == NULL) {
 		struct PrivSec_t *cur = h;
@@ -40,11 +40,11 @@ asmlinkage long sys_ps_info(struct PrivSec_t *h)
 		   tail = tail->next;
 		}
 		current->ps_info_h = head;
-		current->ps_info_called = 1;
 		printk("Pid: %u\n", current->pid);
 	}	
 	else { 
 		printk("INVALID DOUBLE CALL TO PS_INFO SYSCALL\n");
 	}
+    current->ps_level = level;
 	return 0;
 }
