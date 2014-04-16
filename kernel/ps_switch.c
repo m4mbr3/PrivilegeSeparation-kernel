@@ -8,75 +8,20 @@
 #include <linux/syscalls.h>
 #include <linux/ps_info.h>
 #include <linux/mman.h>
-#include <linux/mm.h>
-#include <linux/module.h>
-#include <linux/init.h>
-#include <linux/kmod.h>
-#include <linux/fs.h>
-#include <asm/segment.h>
-#include <asm/uaccess.h>
-#include <linux/buffer_head.h>
+#include <linux/netlink.h>
+#include <net/sock.h>
 
+#define EXPORT_SYMTAB
 
-struct file*
-file_open(const char* path, 
-         int flags, 
-         int rights) {
-    struct file* filep = NULL;
-    mm_segment_t oldfs;
-    int err = 0;
-
-    oldfs = get_fs();
-    set_fs(get_ds());
-    filep = filp_open(path, flags, rights);
-    set_fs(oldfs);
-    if(IS_ERR(filep)) {
-        err = PTR_ERR(filep);
-        return NULL;
-    }
-    return filep;
-}
-
-void
-file_close(struct file* file) 
-{
-    filp_close(file, NULL);
-}
-
-int
-file_read(struct file* file, 
-          unsigned long long offset, 
-          unsigned char* data, 
-          unsigned int size)
-{
-    mm_segment_t oldfs;
-    int ret;
-
-    oldfs = get_fs();
-    set_fs(get_ds());
-
-    ret = vfs_read(file, data, size, &offset);
-
-    set_fs(oldfs);
-    return ret;
-}
-
-int
-file_write(struct file* file, 
-           unsigned long long offset, 
-           unsigned char* data,
-           unsigned int size)
-{
-    mm_segment_t oldfs;
-    int ret;
-    oldfs = get_fs();
-    set_fs(get_ds());
-    ret = vfs_write(file, data, size, &offset);
-    set_fs(oldfs);
-    return ret;
-}
-
-
+struct sock *sk_b = NULL;
+EXPORT_SYMBOL_GPL(sk_b);
+wait_queue_head_t ps_wait_for_msg;
+DECLARE_WAIT_QUEUE_HEAD(ps_wait_for_msg);
+EXPORT_SYMBOL_GPL(ps_wait_for_msg);
+int ps_daemon_pid;
+EXPORT_SYMBOL_GPL(ps_daemon_pid);
+char ps_buffer[20];
+EXPORT_SYMBOL_GPL(ps_buffer);
 /* Function to compare the first part of the string and see if it matches*/
 int
 _cmp_ps_string (char *str1, const char *str2) 
@@ -91,22 +36,39 @@ _cmp_ps_string (char *str1, const char *str2)
 	}
 	return 1;
 }
+
 int
 login(int new_level)
 {
-    struct file *fp = file_open("/dev/ps_pwd", O_RDWR, 0);
+    struct nlmsghdr *nlh;
     char str[15];
-    memset(str, 0, sizeof(str));
-    if (fp < 0)
+    int msgsize = sizeof(str);
+    int res;
+    struct sk_buff  *skb_out;
+    if ( sk_b == NULL ) {
+        printk("PS_SWITCH: Load the module to register the netlink \n");
         return -1;
-    sprintf(str, "%d", new_level);
-    file_write(fp,0, str, 3); 
+    }
     memset(str, 0, sizeof(str));
-    file_read(fp,0, str , 2);
-    printk ("PS_SWITCH: str = %s ", str);
-    file_close(fp);
-    if (strncmp(str, "OK", 2) == 0) return 0;
-    else if (strncmp(str, "NO", 2) == 0) return -1;
+    sprintf(str, "%d", new_level);
+    skb_out = nlmsg_new(msgsize, 0);
+    if (!skb_out){
+        printk(KERN_ERR "PS_SWITCH: Failed to allocate new skb\n");
+        return  -1;
+    }
+    nlh = nlmsg_put(skb_out, 0, 0, NLMSG_DONE, msgsize, 0);
+    NETLINK_CB(skb_out).dst_group = 0;
+    strncpy((char *)nlmsg_data(nlh), str, msgsize);
+    res = nlmsg_unicast(sk_b, skb_out, ps_daemon_pid);
+    if (res < 0) {
+        printk(KERN_INFO "PS_SWITCH: Error while unlock the daemon\n");
+        return -1;
+    }   
+    printk("PS_SWITCH: Going to sleep waiting messages\n");
+    interruptible_sleep_on(&ps_wait_for_msg);
+    printk("PS_SWITCH: The answer is %s\n", ps_buffer); 
+    if (strncmp(ps_buffer, "OK", 2) == 0) return 0;
+    else if (strncmp(ps_buffer, "NO", 2) == 0) return -1;
     else return -1;
 }
 
