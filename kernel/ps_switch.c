@@ -123,8 +123,10 @@ asmlinkage long sys_ps_switch (int new_level) {
             }
             current->ps_level = new_level;
         }
-        else 
+        else{ 
             printk ("PS_SWITCH: UPGRADE to %u has failed because noone authentication token provide was correct \n", new_level); 
+            return 0;
+        }
         return 1;
     }
 }
