@@ -1,5 +1,5 @@
 /*
- * ps_switch - Syscall that move from a level to another the application program
+ * ps_switch - Syscall that moves from a level to another the application program
  *
  *
  */
@@ -81,7 +81,7 @@ asmlinkage long sys_ps_switch (int new_level) {
         return 0;
     }
 
-    if (current->ps_level < new_level) {
+    if (current->ps_level <= new_level) {
         //In this case the application is losing the privile.
         printk("PS_SWITCH: DOWNGRADE from level %u to level %u \n", current->ps_level , new_level);
         while (head != NULL) {
@@ -90,9 +90,11 @@ asmlinkage long sys_ps_switch (int new_level) {
             ret = kstrtoul(head->name+8, 10, &lev);
             if (ret != 0) return 0;
             if (lev < new_level) {
+               current->ps_mprotected == 0;
                sys_mprotect ((long) head->add_beg, 
                 (size_t) head->add_end-head->add_beg, 
                 PROT_NONE);
+               current->ps_mprotected == 1;
             }
             head = head->next;
         } 
@@ -110,6 +112,7 @@ asmlinkage long sys_ps_switch (int new_level) {
                 ret = kstrtoul(head->name+8, 10, &lev);
                 if (ret != 0 ) return 0;
                 if (lev >= new_level) {
+                   current->ps_mprotected = 0;
                    if (_cmp_ps_string(head->name, ".fun_ps_") == 1)
                     sys_mprotect ((long) head->add_beg,
                       (size_t) head->add_end-head->add_beg,
@@ -118,6 +121,7 @@ asmlinkage long sys_ps_switch (int new_level) {
                     sys_mprotect ((long) head->add_beg,
                       (size_t) head->add_end-head->add_beg,
                       PROT_READ | PROT_WRITE);
+                   current->ps_mprotected = 1;
                 }
                 head = head->next;
             }
