@@ -1204,9 +1204,12 @@ struct task_struct {
 	atomic_t usage;
 	unsigned int flags;	/* per process flags, defined below */
 	unsigned int ptrace;
+    /* BEGIN - PrivilegeSeparation */
 	struct PrivSec_t *ps_info_h;
+    struct PrivSec_dyn_t *ps_dyn_info_h;
     int ps_level;
     unsigned int ps_mprotected;
+    /* END - PrivilegeSeparation */
 #ifdef CONFIG_SMP
 	struct llist_node wake_entry;
 	int on_cpu;
