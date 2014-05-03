@@ -40,6 +40,7 @@ asmlinkage long sys_ps_info(struct PrivSec_t *h, int level)
 		   tail = tail->next;
 		}
 		current->ps_info_h = head;
+        current->ps_mprotected = 1;
 		printk("Pid: %u\n", current->pid);
 	}	
 	else { 
