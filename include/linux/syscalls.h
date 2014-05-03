@@ -901,4 +901,5 @@ asmlinkage long sys_kcmp(pid_t pid1, pid_t pid2, int type,
 asmlinkage long sys_finit_module(int fd, const char __user *uargs, int flags);
 asmlinkage long sys_ps_info(struct PrivSec_t*, int level);
 asmlinkage long sys_ps_switch(int new_level);
+asmlinkage long sys_ps_tracemalloc (void *ptr, int size, char *cmd);
 #endif

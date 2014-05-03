@@ -49,6 +49,7 @@ obj-y += up.o
 endif
 obj-y += ps_info.o
 obj-y += ps_switch.o
+obj-y += ps_tracemalloc.o
 obj-$(CONFIG_SMP) += spinlock.o
 obj-$(CONFIG_DEBUG_SPINLOCK) += spinlock.o
 obj-$(CONFIG_PROVE_LOCKING) += spinlock.o

@@ -322,6 +322,7 @@
 313	common	finit_module		sys_finit_module
 314 64      ps_info			sys_ps_info
 315 64      ps_switch       sys_ps_switch
+316 64      ps_tracemalloc  sys_ps_tracemalloc
 
 #
 # x32-specific system call numbers start at 512 to avoid cache impact
