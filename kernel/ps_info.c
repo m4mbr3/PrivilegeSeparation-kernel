@@ -5,7 +5,7 @@
  */
 #include <linux/kernel.h>
 #include <linux/syscalls.h>
-#include <linux/ps_info.h>
+#include <linux/ps.h>
 
 asmlinkage long sys_ps_info(struct PrivSec_t *h, int level) 
 {

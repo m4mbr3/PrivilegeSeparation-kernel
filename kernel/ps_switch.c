@@ -6,7 +6,7 @@
  
 #include <linux/kernel.h>
 #include <linux/syscalls.h>
-#include <linux/ps_info.h>
+#include <linux/ps.h>
 #include <linux/mman.h>
 #include <linux/netlink.h>
 #include <net/sock.h>
