@@ -90,14 +90,26 @@ asmlinkage long sys_ps_switch (int new_level) {
             ret = kstrtoul(head->name+8, 10, &lev);
             if (ret != 0) return 0;
             if (lev < new_level) {
-               current->ps_mprotected == 0;
+               current->ps_mprotected = 0;
                sys_mprotect ((long) head->add_beg, 
                 (size_t) head->add_end-head->add_beg, 
                 PROT_NONE);
-               current->ps_mprotected == 1;
+               
+               current->ps_mprotected = 1;
             }
             head = head->next;
         } 
+        struct PrivSec_dyn_t *curr = current->ps_dyn_info_h;
+        while(curr != NULL) {
+            if ( curr->ps_level < new_level) {
+                current->ps_mprotected = 0;
+                sys_mprotect ((long) curr->mem,
+                    (size_t) curr->size, 
+                        PROT_NONE);
+                current->ps_mprotected = 1;
+            }
+            curr = curr->next;
+        }
         current->ps_level = new_level;
         return 1;
     }
@@ -124,6 +136,17 @@ asmlinkage long sys_ps_switch (int new_level) {
                    current->ps_mprotected = 1;
                 }
                 head = head->next;
+            }
+            struct PrivSec_dyn_t *curr = current->ps_dyn_info_h;
+            while(curr!=NULL) {
+                if( curr->ps_level >= new_level) {
+                    current->ps_mprotected = 0;
+                    sys_mprotect ((long) curr->mem, 
+                      (size_t) curr->size,
+                      PROT_READ | PROT_WRITE);
+                    current->ps_mprotected = 1;
+                }
+                curr = curr->next;
             }
             current->ps_level = new_level;
         }
