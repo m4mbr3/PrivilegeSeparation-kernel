@@ -12,17 +12,20 @@
 
 
 asmlinkage long sys_ps_tracemalloc (void *ptr, int size, char *cmd) {
-    /*
+    int found = 0;
+    struct PrivSec_dyn_t *curr = NULL;
+    struct PrivSec_dyn_t *new = NULL;
+    struct PrivSec_dyn_t *next = NULL;
     if (current->ps_info_h == NULL) {
         printk (KERN_ERR "PS_TRACEMALLOC: The program %u is not designed to use the "
                 "Privilege Separation system\n", current->pid);
         return 0;
     }
-    */
-    int ps_level = current->ps_level;
+    
+    
     if (strncmp(cmd, "MALLOC", 6) == 0) {
        printk (KERN_INFO "PS_TRACEMALLOC: The command provided is MALLOC \n"); 
-       printk (KERN_INFO "PS_TRACEMALLOC: %x address, %u size\n", ptr, size); 
+       printk (KERN_INFO "PS_TRACEMALLOC: %x address, %u size\n", (unsigned int) ptr, size); 
        if (current->ps_dyn_info_h == NULL) {
             //create a new element that will be the first of the list
             struct PrivSec_dyn_t *new = 
@@ -35,10 +38,9 @@ asmlinkage long sys_ps_tracemalloc (void *ptr, int size, char *cmd) {
             current->ps_dyn_info_h = new;
             return 1;
        }
-       struct PrivSec_dyn_t *curr = current->ps_dyn_info_h;
+       curr = current->ps_dyn_info_h;
        while (curr->next != NULL) curr = curr->next;
-       struct PrivSec_dyn_t *new = 
-            (struct PrivSec_dyn_t *) kmalloc(sizeof(struct PrivSec_dyn_t), 
+       new = (struct PrivSec_dyn_t *) kmalloc(sizeof(struct PrivSec_dyn_t), 
                                       GFP_ATOMIC);
        new->ps_level = current->ps_level;
        new->size = size;
@@ -48,9 +50,9 @@ asmlinkage long sys_ps_tracemalloc (void *ptr, int size, char *cmd) {
     }
     else if (strncmp(cmd, "FREE", 4) == 0) {
         printk (KERN_INFO "PS_TRACEMALLOC: The command provided is FREE \n");
-        printk (KERN_INFO "PS_TRACEMALLOC: %x address, %u size\n", ptr, size);
+        printk (KERN_INFO "PS_TRACEMALLOC: %x address, %u size\n", (unsigned int)ptr, size);
         if (current->ps_dyn_info_h == NULL) return -1; //case zero elements.
-        struct PrivSec_dyn_t *curr = current->ps_dyn_info_h;
+        curr = current->ps_dyn_info_h;
         if (curr->next == NULL) {
             //case only one element inside the list
             if (curr->mem == ptr) {
@@ -62,7 +64,7 @@ asmlinkage long sys_ps_tracemalloc (void *ptr, int size, char *cmd) {
                 return -1;
             }
         }
-        struct PrivSec_dyn_t *next = curr->next;
+        next = curr->next;
         if (next->next == NULL) {
            //case two elements inside the list. 
            if (curr->mem == ptr) {
@@ -79,7 +81,7 @@ asmlinkage long sys_ps_tracemalloc (void *ptr, int size, char *cmd) {
                return -1;
            }
         }
-        int found = 0;
+        found = 0;
         while(!found && next != NULL) {
             if (curr->mem == ptr) found=2;
             else if (next->mem == ptr ) found=1;
@@ -102,5 +104,7 @@ asmlinkage long sys_ps_tracemalloc (void *ptr, int size, char *cmd) {
     }
     else {
         printk (KERN_ERR "PS_TRACEMALLOC: Unknown command provided\n");
+        return -1;
     }
+    return -1;
 }
