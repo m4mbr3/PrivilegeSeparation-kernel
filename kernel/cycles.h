@@ -1,20 +1,7 @@
-#include <uapi/linux/elf.h>
-
-#define FREQ_MAX 3600000
-struct PrivSec_t {
-	char name[100];
-	Elf32_Addr add_beg;
-	Elf32_Addr add_end;
-	struct PrivSec_t *next;
-};
- 
-struct PrivSec_dyn_t {
-    int ps_level;
-    int size;
-    void *mem;
-    struct PrivSec_dyn_t *next;
-};
-                                                                                                                                    
+#ifndef _CYCLES_H                                                                                                                                        
+#define _CYCLES_H                                                                                                                                        
+                                                                                                                                                         
+#include <stdint.h>                                                                                                                                      
                                                                                                                                                          
 static inline uint64_t cycle_start(void)                                                                                                                 
 {                                                                                                                                                        
@@ -50,10 +37,10 @@ static inline uint64_t cycle_stop(void)
         return (uint64_t) cycles_high << 32 | (uint64_t) cycles_low;
 }
 
-static inline uint64_t cycle_time(uint64_t cycles)
+static inline double cycle_time(uint64_t cycles)
 {
-        return div64_u64(cycles, FREQ_MAX);
+        return (double) cycles / (double) FREQ_MAX;
 }
 
-
+#endif
 

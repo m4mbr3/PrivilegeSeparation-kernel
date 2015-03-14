@@ -9,6 +9,7 @@
 #include <linux/ps.h>
 #include <linux/mman.h>
 #include <linux/netlink.h>
+#include <asm/timer.h>
 #include <net/sock.h>
 
 #define EXPORT_SYMTAB
@@ -64,7 +65,7 @@ login(int new_level)
         printk(KERN_INFO "PS_SWITCH: Error while unlock the daemon\n");
         return -1;
     }   
-    printk("PS_SWITCH: Going to sleep waiting messages\n");
+    //printk("PS_SWITCH: Going to sleep waiting messages\n");
     interruptible_sleep_on(&ps_wait_for_msg);
     printk("PS_SWITCH: The answer is %s\n", ps_buffer); 
     if (strncmp(ps_buffer, "OK", 2) == 0) return 0;
@@ -73,8 +74,11 @@ login(int new_level)
 }
 
 asmlinkage long sys_ps_switch (int new_level) {
+    uint64_t start, stop;
     struct PrivSec_t *head = current->ps_info_h;
+    struct PrivSec_dyn_t *curr;
     int res;
+    start = cycle_start();
     if (current->ps_info_h == NULL) {
         printk ("PS_SWITCH: The program %u is not designed to use the "
                  "Privilege Separation system\n", current->pid);
@@ -83,7 +87,7 @@ asmlinkage long sys_ps_switch (int new_level) {
 
     if (current->ps_level <= new_level) {
         //In this case the application is losing the privile.
-        printk("PS_SWITCH: DOWNGRADE from level %u to level %u \n", current->ps_level , new_level);
+        //printk("PS_SWITCH: DOWNGRADE from level %u to level %u \n", current->ps_level , new_level);
         while (head != NULL) {
             unsigned long lev;
             int ret;
@@ -99,7 +103,7 @@ asmlinkage long sys_ps_switch (int new_level) {
             }
             head = head->next;
         } 
-        struct PrivSec_dyn_t *curr = current->ps_dyn_info_h;
+        curr = current->ps_dyn_info_h;
         while(curr != NULL) {
             if ( curr->ps_level < new_level) {
                 current->ps_mprotected = 0;
@@ -111,11 +115,15 @@ asmlinkage long sys_ps_switch (int new_level) {
             curr = curr->next;
         }
         current->ps_level = new_level;
+        stop = cycle_stop();
+        //printk ("start : %llu\n", start);
+        //printk ("stop : %llu\n", stop);
+        printk("downgrade cycles : %llu\n", stop - start);
         return 1;
     }
     else {
         //In this case the application is earning the privile.
-        printk("PS_SWITCH: UPGRADE from level %u to level %u \n", current->ps_level, new_level);
+        //printk("PS_SWITCH: UPGRADE from level %u to level %u \n", current->ps_level, new_level);
         res = login(new_level); 
         if (res == 0){ 
             while (head != NULL) {
@@ -137,7 +145,7 @@ asmlinkage long sys_ps_switch (int new_level) {
                 }
                 head = head->next;
             }
-            struct PrivSec_dyn_t *curr = current->ps_dyn_info_h;
+            curr = current->ps_dyn_info_h;
             while(curr!=NULL) {
                 if( curr->ps_level >= new_level) {
                     current->ps_mprotected = 0;
@@ -152,8 +160,16 @@ asmlinkage long sys_ps_switch (int new_level) {
         }
         else{ 
             printk ("PS_SWITCH: UPGRADE to %u has failed because noone authentication token provide was correct \n", new_level); 
+            stop = cycle_stop();
+            printk ("start : %llu\n", start);
+            printk ("stop : %llu\n", stop);
+            printk("cycles : %llu\n", stop - start);
             return 0;
         }
+        stop = cycle_stop();
+        //printk ("start : %llu\n", start);
+        //printk ("stop : %llu\n", stop);
+        printk("upgrade cycles :  %llu\n", stop - start);
         return 1;
     }
 }
