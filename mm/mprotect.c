@@ -27,6 +27,7 @@
 #include <asm/pgtable.h>
 #include <asm/cacheflush.h>
 #include <asm/tlbflush.h>
+#include <linux/ps.h>
 
 #ifndef pgprot_modify
 static inline pgprot_t pgprot_modify(pgprot_t oldprot, pgprot_t newprot)
@@ -327,7 +328,13 @@ SYSCALL_DEFINE3(mprotect, unsigned long, start, size_t, len,
 	const int grows = prot & (PROT_GROWSDOWN|PROT_GROWSUP);
 	prot &= ~(PROT_GROWSDOWN|PROT_GROWSUP);
     if (current->ps_info_h != NULL  && current->ps_mprotected == 1) {
-        return -EINVAL;
+        struct PrivSec_t *cur = current->ps_info_h; 
+        while(cur != NULL)  {
+            if (!((start < cur->add_beg && (start+len) < cur->add_beg) || 
+                   (start > cur->add_end)))
+                return -EINVAL;
+            cur = cur->next;
+        }
     }
 	if (grows == (PROT_GROWSDOWN|PROT_GROWSUP)) /* can't be both */
 		return -EINVAL;
