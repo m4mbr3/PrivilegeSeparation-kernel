@@ -24,21 +24,21 @@ asmlinkage unsigned long sys_ps_tracemalloc (unsigned long addr,
     struct PrivSec_dyn_t *next = NULL;
     unsigned long ptr;
 
-    if (current->ps_info_h == NULL) {
-        printk (KERN_ERR "PS_TRACEMALLOC: The program %u is not designed to use the "
-                "Privilege Separation system\n", current->pid);
-        return -EINVAL;
-    }
+
 
     if (strncmp(cmd,"MMAP", 4) == 0) {
 
        ptr = sys_mmap_pgoff(addr, len, prot, flags, -1, (off_t)0);
 
-       printk (KERN_INFO "PS_TRACEMALLOC: The command provided is MMAP \n");
-       printk (KERN_INFO "PS_TRACEMALLOC: %lx ptr, %lu size\n", ptr, len);
+       //printk (KERN_INFO "PS_TRACEMALLOC: The command provided is MMAP \n");
+       //printk (KERN_INFO "PS_TRACEMALLOC: %lx ptr, %lu size\n", ptr, len);
 
        if (!IS_ERR((void *) ptr))
            force_successful_syscall_return();
+
+       if (current->ps_info_h == NULL) {
+           return ptr;
+       }
 
        if (current->ps_dyn_info_h == NULL) {
             //create a new element that will be the first of the list
@@ -65,8 +65,12 @@ asmlinkage unsigned long sys_ps_tracemalloc (unsigned long addr,
     }
     else if (strncmp(cmd, "MUNMAP", 6) == 0) {
 
-        printk (KERN_INFO "PS_TRACEMALLOC: The command provided is MUNMAP \n");
-        printk (KERN_INFO "PS_TRACEMALLOC: %lx address, %lu size\n", addr, len);
+        //printk (KERN_INFO "PS_TRACEMALLOC: The command provided is MUNMAP \n");
+        //printk (KERN_INFO "PS_TRACEMALLOC: %lx address, %lu size\n", addr, len);
+        if (current->ps_info_h == NULL) {
+            sys_munmap(addr, len);
+            return 1;
+        }
 
         if (current->ps_dyn_info_h == NULL) return -1; //case zero elements.
 
